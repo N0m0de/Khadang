@@ -1,0 +1,33 @@
+[project]
+name = "khadang"
+version = "1.0.0"
+description = "Personal Telegram Business autoresponder: LLM replies in your voice, per-contact memory, voice transcription, human-in-the-loop approval."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = [
+    "imageio-ffmpeg==0.6.0",
+    "python-telegram-bot[ext]>=22.8,<23",
+    "openai>=3.24,<4",
+    "aiosqlite>=0.20",
+    "pydantic-settings>=2.6",
+    "python-dotenv>=1.0",
+    "httpx>=0.27",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "python-multipart>=0.0.12",
+    "jinja2>=3.1",
+    "anthropic>=1.0",
+]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+dev = ["pytest>=9,<10"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["secretary"]

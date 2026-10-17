@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>Historical chat learning</h1>
+  <p><a href="{{ root }}/contacts/{{ chat_id }}">Back to this contact</a></p>
+  <p>{{ meta.owner_messages }} messages written by you · {{ meta.contact_messages }} written by your contact</p>
+  {% if meta.excluded_recent_owner_messages %}<p class="muted">{{ meta.eligible_owner_messages }} earlier owner messages are eligible for style learning. {{ meta.excluded_recent_owner_messages }} recent owner-side messages were excluded because the HTML export cannot distinguish your manual messages from Khadang-generated replies.</p>{% endif %}
+  <p>Status: <strong>{{ meta.status }}</strong> · {{ meta.batches_done|default(0) }}/{{ meta.batches_total|default(0) }} batches processed</p>
+  <p class="muted">The export is analyzed as historical evidence. Suggested memories and style remain inactive until you apply them. Raw imported text is deleted after successful analysis; your original export is untouched.</p>
+  {% if meta.facts_candidates_total %}<p>Showing {{ meta.facts_proposed }} consolidated suggestions from {{ meta.facts_candidates_total }} initial candidates. <a href="{{ root }}/contacts/{{ chat_id }}/imports/{{ job_id }}/candidates">Download the full dated candidate archive</a></p>{% endif %}
+  {% if meta.status == "failed" %}<p>Analysis stopped ({{ meta.error_type }}). Completed batches are saved and can be resumed without reprocessing them.</p>{% endif %}
+  {% if meta.status != "ready" %}<a class="btn" href="{{ root }}/contacts/{{ chat_id }}/imports/{{ job_id }}">Refresh progress</a>{% endif %}
+</section>
+{% if proposal %}
+<form method="post" action="{{ root }}/contacts/{{ chat_id }}/imports/{{ job_id }}/apply">
+  <section class="card">
+    <h2>Your writing style with this contact</h2>
+    {% if proposal.style_applied %}<p>Style profile has been applied to this contact.</p>{% endif %}
+    <p>Review or edit the style profile below. Real examples are included to help match your tone.</p>
+    <textarea name="style_json" rows="16" style="width:100%" dir="auto" aria-label="Writing style profile">{{ style_json }}</textarea>
+    <label><input type="checkbox" name="apply_style"> Apply this writing style to this contact</label>
+  </section>
+  <section class="card">
+    <h2>Proposed memories ({{ proposal.facts|length }})</h2>
+    <p>Choose only facts that are accurate and useful. Old addresses, jobs, preferences or plans may have changed. No suggestions are selected automatically.</p>
+    {% for fact in proposal.facts %}
+    {% set i=loop.index0 %}
+    <div style="padding:16px 0;border-top:1px solid var(--line)">
+      {% if i in proposal.accepted_facts %}<strong>Already applied</strong>{% else %}<label><input type="checkbox" name="facts" value="{{ i }}"> Keep this {{ fact.kind }}</label>{% endif %}
+      <textarea name="fact_{{ i }}" rows="2" style="width:100%;margin-top:8px" dir="auto" aria-label="Memory suggestion {{ loop.index }}">{{ fact.content }}</textarea>
+      <small>Source date: {{ fact.source_date }}</small>
+      <blockquote dir="auto">{{ fact.quote }}</blockquote>
+    </div>
+    {% endfor %}
+    <button class="btn-primary">Apply selected learning</button>
+  </section>
+</form>
+{% endif %}
+{% endblock %}

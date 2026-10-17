@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card hero narrow">
+  <h1>Khadang</h1>
+  <p class="muted">Your private Telegram assistant. Sign in with your owner password.</p>
+  <form method="post" action="/login" class="row">
+    <input type="hidden" name="next" value="{{ next_path|default('/') }}">
+    <input name="password" type="password" aria-label="Owner password" placeholder="Owner password" autocomplete="current-password" required autofocus maxlength="512">
+    <button class="btn-primary">Sign in</button>
+  </form>
+</section>
+{% endblock %}

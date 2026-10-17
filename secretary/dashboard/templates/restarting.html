@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "_ui.html" import orb %}
+{% block content %}
+<meta http-equiv="refresh" content="8;url={{ root }}/">
+<section class="card hero narrow">
+<div class="hero-head">{{ orb("warn", "lg") }}<div class="hero-text"><span class="hero-title">{{ "Restarting…"|t }}</span></div></div>
+<p class="muted" style="margin:0">Khadang is restarting. This page reloads in a few seconds; sign in again with your owner password.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, orb %}
+{% block content %}
+<section class="card hero narrow">
+<div class="hero-head">{{ orb("ok", "lg") }}<div class="hero-text"><span class="hero-title">{{ "Log in"|t }}</span></div></div>
+<p class="muted" style="margin:0">{{ "Send"|t }} <code>/dashboard</code> {{ "to your bot in Telegram to get a one-time login link."|t }}</p>
+<form method="post" action="{{ root }}/login" id="login" class="row">
+  <input name="token" id="token" aria-label="{{ 'token from the link'|t }}" dir="ltr" placeholder="{{ 'token from the link'|t }}" autocomplete="off" required style="flex:1 1 12rem">
+  <button class="btn-primary">{{ "Log in"|t }}</button>
+</form>
+</section>
+<script nonce="{{ csp_nonce|default('') }}">
+  // The token rides in the URL fragment so it never reaches a server log; submit it once.
+  const t = new URLSearchParams(location.hash.slice(1)).get("t");
+  if (t) {
+    history.replaceState(null, "", "{{ root }}/login");
+    document.getElementById("token").value = t;
+    document.getElementById("login").submit();
+  }
+</script>
+{% endblock %}
