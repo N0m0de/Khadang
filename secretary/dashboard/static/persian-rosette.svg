@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+<circle cx="40" cy="40" r="36" stroke="#d5b675" stroke-width="1.2"/>
+<circle cx="40" cy="40" r="31" stroke="#d5b675" stroke-opacity=".4"/>
+<defs><path id="p" d="M40 35C29 25 34 13 40 9C46 13 51 25 40 35Z" fill="#d5b675"/></defs>
+<use href="#p"/><use href="#p" transform="rotate(30 40 40)"/><use href="#p" transform="rotate(60 40 40)"/><use href="#p" transform="rotate(90 40 40)"/><use href="#p" transform="rotate(120 40 40)"/><use href="#p" transform="rotate(150 40 40)"/><use href="#p" transform="rotate(180 40 40)"/><use href="#p" transform="rotate(210 40 40)"/><use href="#p" transform="rotate(240 40 40)"/><use href="#p" transform="rotate(270 40 40)"/><use href="#p" transform="rotate(300 40 40)"/><use href="#p" transform="rotate(330 40 40)"/>
+<circle cx="40" cy="40" r="8" fill="#123c52" stroke="#d5b675" stroke-width="2"/><circle cx="40" cy="40" r="3" fill="#d5b675"/>
+</svg>

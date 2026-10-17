@@ -1,12 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card hero narrow">
-  <h1>Khadang</h1>
-  <p class="muted">Your private Telegram assistant. Sign in with your owner password.</p>
-  <form method="post" action="/login" class="row">
+<section class="palace-login" aria-labelledby="login-title">
+ <div class="palace-art" aria-hidden="true">
+  <div class="art-caption">{{ 'الهام از تخت جمشید' if lang == 'fa' else 'INSPIRED BY PERSEPOLIS' }}</div>
+  <img src="{{ root }}/static/persian-gate.svg" alt="">
+  <div class="art-inscription">{{ 'جای سخن‌های ارزشمند' if lang == 'fa' else 'A home for words that matter.' }}</div>
+  <span class="art-foot">{{ 'ارتباط، با اندیشه و توجه' if lang == 'fa' else 'CONNECTION • CONSIDERATION • CARE' }}</span>
+ </div>
+ <div class="palace-login-content">
+  <span class="palace-eyebrow">{{ 'خوش آمدید' if lang == 'fa' else 'WELCOME TO YOUR PRIVATE SPACE' }}</span>
+  <h1 id="login-title">{{ 'درِ گفت‌وگو باز است.' if lang == 'fa' else 'Good conversations\nstart here.' }}</h1>
+  <p class="muted">{{ 'با گذرواژهٔ خود وارد داشبورد دستیار تلگرام شوید.' if lang == 'fa' else 'Sign in to your Telegram assistant. Your people, messages, and memories, together in one place.' }}</p>
+  <form method="post" action="/login" class="palace-login-form">
     <input type="hidden" name="next" value="{{ next_path|default('/') }}">
-    <input name="password" type="password" aria-label="Owner password" placeholder="Owner password" autocomplete="current-password" required autofocus maxlength="512">
-    <button class="btn-primary">Sign in</button>
+    <label for="owner-password">{{ 'گذرواژهٔ صاحب حساب' if lang == 'fa' else 'Owner password' }}</label>
+    <input id="owner-password" name="password" type="password" placeholder="{{ 'گذرواژهٔ خود را وارد کنید' if lang == 'fa' else 'Enter your password' }}" autocomplete="current-password" required autofocus maxlength="512">
+    <button class="btn-primary">{{ 'ورود به داشبورد' if lang == 'fa' else 'Enter dashboard' }} <span aria-hidden="true">↗</span></button>
   </form>
+  <p class="palace-login-note"><span aria-hidden="true">◇</span> {{ 'ورود خصوصی · تنها برای صاحب حساب' if lang == 'fa' else 'Private access · For the account owner only' }}</p>
+ </div>
 </section>
+<div class="palace-bottom-mark" aria-hidden="true">— ✦ —</div>
 {% endblock %}

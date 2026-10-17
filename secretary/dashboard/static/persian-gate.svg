@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 420" fill="none">
+<defs>
+ <linearGradient id="stone" x1="0" x2="1"><stop stop-color="#b89a61"/><stop offset=".4" stop-color="#f0d9a5"/><stop offset="1" stop-color="#b89a61"/></linearGradient>
+ <pattern id="flutes" width="9" height="8" patternUnits="userSpaceOnUse"><path d="M1 0V8" stroke="#153d4c" stroke-opacity=".35"/></pattern>
+ <g id="column"><path d="M0 97H40V110H0zM5 111H35V292H5zM0 293H40V305H0zM-7 306H47V318H-7z" fill="url(#stone)"/><path d="M5 111H35V292H5z" fill="url(#flutes)"/><path d="M-8 84H48V97H-8zM-13 72H53V83H-13z" fill="#d3b477"/><path d="M-12 71C-36 44-5 33 2 52L11 70M52 71C76 44 45 33 38 52L29 70" stroke="#d3b477" stroke-width="8"/><path d="M20 44V70" stroke="#d3b477" stroke-width="9"/></g>
+</defs>
+<circle cx="240" cy="127" r="107" stroke="#d7ba7a" stroke-opacity=".18"/>
+<circle cx="240" cy="127" r="87" stroke="#d7ba7a" stroke-opacity=".12"/>
+<path d="M240 14V27M240 227V240M127 127H140M340 127H353M160 47L169 56M311 198L320 207M160 207L169 198M311 56L320 47" stroke="#d7ba7a" stroke-opacity=".55"/>
+<circle cx="240" cy="113" r="25" fill="#d5b675"/><circle cx="240" cy="113" r="17" stroke="#153e50" stroke-width="2"/>
+<path d="M193 111H130L156 124H199M192 131H149L171 141H210M287 111H350L324 124H281M288 131H331L309 141H270M240 143V164M229 153H251" stroke="#d5b675" stroke-width="4"/>
+<path d="M50 171H430V184H50zM62 186H418V197H62z" fill="url(#stone)"/>
+<path d="M69 177H410" stroke="#173f4f" stroke-width="2" stroke-dasharray="4 7"/>
+<use href="#column" transform="translate(86 113) scale(.67)"/>
+<use href="#column" transform="translate(366 113) scale(.67)"/>
+<use href="#column" transform="translate(164 113) scale(.67)"/>
+<use href="#column" transform="translate(288 113) scale(.67)"/>
+<path d="M69 328H411V339H69zM51 340H429V352H51zM33 353H447V365H33z" fill="url(#stone)"/>
+<path d="M51 375H429M77 388H403" stroke="#d5b675" stroke-opacity=".5"/>
+<path d="M220 266L240 246L260 266L240 286Z" stroke="#d5b675" stroke-opacity=".5"/>
+<circle cx="240" cy="266" r="5" fill="#d5b675"/>
+</svg>

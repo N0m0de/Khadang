@@ -4,20 +4,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f5f4f9">
+<meta name="theme-color" content="#123c52">
 <title>{{ "Khadang"|t }}</title>
 <link rel="stylesheet" href="{{ root }}/static/style.css">
+<link rel="stylesheet" href="{{ root }}/static/persia.css?v=1">
 <script nonce="{{ csp_nonce|default('') }}" src="{{ root }}/static/app.js" defer></script>
 </head>
 <body>
 {% set path = request.url.path %}
 {% set authed = request.state.pending is defined %}
 {% set tabs = (("/", "Home", "home"), ("/drafts", "Waiting for you", "hourglass"), ("/contacts", "People", "group"), ("/prompts", "Secretary's tone", "graphic_eq"), ("/settings", "Settings", "tune")) %}
-<div class="blobs" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="palace-frieze" aria-hidden="true"></div>
 <div class="shell{{ '' if authed else ' solo' }}">
 {% if authed %}
 <aside class="side">
-  <a class="brand" href="{{ root }}/">{{ orb(orb_state|default("ok"), "sm") }}<span>{{ "Khadang"|t }}</span></a>
+  <a class="brand" href="{{ root }}/"><img class="royal-seal" src="{{ root }}/static/persian-rosette.svg" alt=""><span>{{ "Khadang"|t }}<small>{{ 'خانهٔ گفت‌وگو' if lang == 'fa' else 'THE CONVERSATION HOUSE' }}</small></span></a>
+  <div class="side-caption">{{ 'فضایی آرام برای ارتباط‌های شما' if lang == 'fa' else 'A quiet space for your connections' }}</div>
   <nav aria-label="{{ 'Sections'|t }}" style="display:contents">
   {% for href, label, ic in tabs %}
   {% set here = path == href if href == "/" else path.startswith(href) %}
@@ -26,6 +28,7 @@
   {% endfor %}
   </nav>
   <div class="foot">
+    <span class="heritage-note">{{ 'الهام‌گرفته از شکوه ایران باستان' if lang == 'fa' else 'INSPIRED BY ANCIENT PERSIA' }}</span>
     <a href="{{ root }}/prompts#about_me">{{ icon("badge") }}{{ "Introduce myself"|t }}</a>
     {% if hosted %}<a href="/account">{{ icon("account") }}{{ "Account and credit"|t }}</a>
     {% else %}<form method="post" action="{{ root }}/logout"><button class="link">{{ icon("logout") }}{{ "Log out"|t }}</button></form>{% endif %}
@@ -34,11 +37,12 @@
 {% endif %}
 <div class="main">
 <header class="topbar">
-  <a class="brand" href="{{ root }}/">{{ orb(orb_state|default("ok"), "sm") }}<span>{{ "Khadang"|t }}</span></a>
+  <a class="brand" href="{{ root }}/"><img class="royal-seal" src="{{ root }}/static/persian-rosette.svg" alt=""><span>{{ "Khadang"|t }}</span></a>
   {% if authed and hosted %}<a class="top-link" href="/account">{{ icon("account", 18) }}{{ "Account"|t }}</a>{% endif %}
   {% if authed and not hosted %}<form method="post" action="{{ root }}/logout" style="margin:0"><button class="link">{{ icon("logout", 18) }}{{ "Log out"|t }}</button></form>{% endif %}
 </header>
 <main>
+{% if authed %}<div class="palace-heading"><span>{{ 'گفت‌وگوهای شما، با رسیدگی بیشتر' if lang == 'fa' else 'YOUR CONVERSATIONS, CAREFULLY KEPT' }}</span><i aria-hidden="true">✦</i></div>{% endif %}
 {% if authed and private_unconfigured %}
 <section class="card"><strong>Finish connecting Khadang</strong><p>Add your Telegram Business bot token, Telegram user ID and OpenAI API key in <a href="{{ root }}/settings">Settings</a>, then restart here. Replies begin paused with manual approval enabled. No Telegram messages are being sent yet.</p></section>
 {% endif %}
