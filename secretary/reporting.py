@@ -164,6 +164,10 @@ async def render_report(end: datetime) -> str:
     await followups.capture_requests(rows, alert_kind)
     title = ('Noon report' if end.hour == 12 else 'End-of-day report')
     header = f'📋 {title} — {start:%Y-%m-%d}\n{start:%H:%M}–{end:%H:%M} (Tehran)'
+    health = json.loads(await db.get_state('telegram_polling_health', '{}'))
+    if health and (health.get('state') != 'ok' or
+                   int(time.time()) - (health.get('last_success_at') or 0) > 90):
+        header += '\n⚠️ Telegram reception is interrupted or unverified; this report may be incomplete.'
     if not rows:
         return header + '\n\nNo recorded conversations in this period.'
     data, selected = select_excerpts(rows)
@@ -222,6 +226,30 @@ async def render_report(end: datetime) -> str:
     return header + '\n' + coverage + '\n\n' + summary[:2800]
 
 
+async def queue_coverage(key, end):
+    """Include every recorded conversation independently of model summary selection."""
+    start, end = report_window(end)
+    cur = await db._db().execute('''SELECT m.chat_id,
+        COALESCE(NULLIF(o.nickname,''),NULLIF(o.tg_first_name,''),CAST(m.chat_id AS TEXT)) AS contact,
+        COUNT(*) AS total, SUM(m.role='user') AS incoming,
+        SUM(m.role='assistant' AND m.via_bot=0) AS owner_sent,
+        SUM(m.role='assistant' AND m.via_bot=1) AS bot_sent
+        FROM messages m JOIN connections c ON c.conn_id=m.conn_id
+        LEFT JOIN contact_overrides o ON o.conn_id=m.conn_id AND o.chat_id=m.chat_id
+        WHERE c.owner_user_id=? AND m.deleted_at IS NULL AND m.created_at>=? AND m.created_at<?
+        GROUP BY m.conn_id,m.chat_id ORDER BY MAX(m.created_at) DESC''',
+        (settings.owner_user_id,int(start.timestamp()),int(end.timestamp())))
+    rows = await cur.fetchall()
+    for page in range(0,len(rows),10):
+        lines = [f'📚 Conversation coverage — {start:%Y-%m-%d} ({start:%H:%M}–{end:%H:%M}, Tehran)',
+                 f'{len(rows)} recorded conversations. Every conversation is listed; the AI summary may focus on selected topics.']
+        for row in rows[page:page+10]:
+            lines.append(f'• {str(row["contact"])[:70]} [chat {row["chat_id"]}]: '
+                         f'{row["incoming"]} incoming / {row["owner_sent"]} from you / {row["bot_sent"]} assistant replies')
+        lines.append('Coverage includes only messages Telegram delivered to the connected bot.')
+        await queue(f'{key}:coverage:{page}', 'report', '\n'.join(lines))
+
+
 async def report_tick(bot, now: datetime | None = None) -> None:
     if not settings.reports_enabled:
         return
@@ -235,6 +263,7 @@ async def report_tick(bot, now: datetime | None = None) -> None:
         cur = await db._db().execute('SELECT 1 FROM owner_notifications WHERE key=?', (key,))
         if await cur.fetchone() is None:
             await queue(key, 'report', await render_report(due))
+        await queue_coverage(key, due)
         items = await followups.pending()
         if due.hour == 0:
             for item in items:

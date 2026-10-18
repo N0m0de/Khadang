@@ -13,6 +13,7 @@ os.environ.update(OWNER_USER_ID='111', DB_PATH=str(Path(tempfile.mkdtemp()) / 'c
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ.update(OWNER_FIRST_NAME='Alex', REPORTS_ENABLED='true', URGENT_ALERTS_ENABLED='true')
 from secretary import db, reporting as r
+from secretary.outgoing import SIGNATURE
 
 
 async def add(role, text, tg_id, conn='ours'):
@@ -55,7 +56,7 @@ async def main():
     await r.deliver(bot, 'alert')
     assert bot.send_message.call_count == 2
     assert all(c.kwargs['chat_id'] == 111 for c in bot.send_message.call_args_list)
-    assert all(c.kwargs['text'].endswith("-Alex's Assistant") for c in bot.send_message.call_args_list)
+    assert all(c.kwargs['text'].endswith(SIGNATURE) for c in bot.send_message.call_args_list)
     await r.initialize()
     await r.scan_alerts()
     await r.deliver(bot, 'alert')
@@ -102,6 +103,15 @@ async def main():
         assert completion.call_args.kwargs['max_completion_tokens'] == 1800
         completion.side_effect = RuntimeError('synthetic quota')
         assert 'AI summary unavailable' in await r.render_report(report_end)
+    # Coverage lists every chat even when an AI summary mentions only a subset.
+    for chat_id in range(300,312):
+        await db.append_message(conn_id='ours',chat_id=chat_id,role='user',content='invented coverage example')
+    await r.queue_coverage('coverage-test',report_end)
+    cur = await db._db().execute('SELECT body FROM owner_notifications WHERE key LIKE ?',('coverage-test:%',))
+    pages = [row[0] for row in await cur.fetchall()]
+    assert len(pages)>=2
+    for chat_id in range(300,312):
+        assert f'chat {chat_id}' in '\n'.join(pages)
     await db.close_db()
     print('Reporting checks passed: Tehran boundaries, detection, owner isolation, retries, restart deduplication, summary fallback.')
 

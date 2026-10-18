@@ -43,6 +43,7 @@
 </header>
 <main>
 {% if authed %}<div class="palace-heading"><span>{{ 'گفت‌وگوهای شما، با رسیدگی بیشتر' if lang == 'fa' else 'YOUR CONVERSATIONS, CAREFULLY KEPT' }}</span><i aria-hidden="true">✦</i></div>{% endif %}
+{% if authed and telegram_health.state in ('retrying', 'stalled') %}<section class="card warn" role="alert"><strong>{{ 'دریافت پیام از تلگرام دچار وقفه شده' if lang == 'fa' else 'Telegram reception needs attention' }}</strong><p>{{ 'اتصال در حال بازیابی است. پاسخ‌ها و گزارش‌ها ممکن است تا دریافت پیام‌های عقب‌افتاده ناقص باشند.' if lang == 'fa' else 'The assistant is reconnecting. Replies and reports may be incomplete until queued messages are recovered.' }}</p></section>{% endif %}
 {% if authed and private_unconfigured %}
 <section class="card"><strong>Finish connecting Khadang</strong><p>Add your Telegram Business bot token, Telegram user ID and OpenAI API key in <a href="{{ root }}/settings">Settings</a>, then restart here. Replies begin paused with manual approval enabled. No Telegram messages are being sent yet.</p></section>
 {% endif %}

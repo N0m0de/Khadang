@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 
 from ..config import settings
+from ..polling import health as polling_health
 from ..setup import mask
 from .fa import FA
 
@@ -99,6 +100,7 @@ assert ago(1000, now=1000 + 3 * 86400) in ("۳ روز پیش", "3 days ago")
 def render(request: Request, name: str, status_code: int = 200, **context: Any) -> HTMLResponse:
     # Read per request (not as Jinja globals) so a live settings change shows up.
     context.setdefault("csp_nonce", getattr(request.state, "csp_nonce", ""))
+    context.setdefault("telegram_health", polling_health())
     context.setdefault("private_unconfigured", getattr(request.app.state, "private_unconfigured", False))
     context.setdefault("hosted", settings.hosted)
     context.setdefault("lang", settings.dashboard_lang)

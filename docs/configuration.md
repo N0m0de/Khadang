@@ -47,6 +47,24 @@ Old tasks survive raw-message deletion and service restarts. Resolve an irreleva
 suggestion with Declined. The model/rule matcher can misclassify requests. A crash between
 Telegram delivery and saving its local receipt can cause a duplicate notification.
 
+Each report also includes a deterministic conversation-coverage list, independent of
+which topics the AI summary selects. The list includes all recorded chats and incoming,
+owner-sent and assistant-reply counts. Reports warn when Telegram reception is degraded.
+Messages not delivered to the bot cannot appear until Telegram sends them.
+
+## Telegram reception recovery
+
+The receiver bounds each polling request and records content-free polling health. If
+successful polls stop for three minutes, it requests a restart and attempts a throttled
+owner warning. Use the documented service supervisor for automatic restarts; foreground
+users must restart the process after it exits. An active process alone does not prove
+Telegram reception is healthy. The dashboard warns on interrupted reception.
+
+Recovered messages keep their original Telegram dates, so they fall into the correct
+daily report. A recovered message more than 15 minutes old requires manual approval and
+bypasses the normal reply delay. Fresh messages still respect your configured delay,
+owner cooldown, quiet hours and approval rules. Emergency detection remains phrase-based.
+
 ## Personalization
 
 Use the dashboard for your own about-me, per-contact notes, relationship tags, tone,

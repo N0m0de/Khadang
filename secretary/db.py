@@ -231,6 +231,7 @@ async def append_message(
     content: str,
     tg_message_id: int | None = None,
     via_bot: bool = False,
+    created_at: int | None = None,
 ) -> None:
     db = _db()
     await db.execute(
@@ -241,7 +242,7 @@ async def append_message(
         """,
         (
             conn_id, chat_id, role, content, tg_message_id,
-            int(via_bot), int(time.time()),
+            int(via_bot), int(time.time()) if created_at is None else created_at,
         ),
     )
     if role == "user":  # the contact list reads last_seen here, so it survives message pruning

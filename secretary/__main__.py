@@ -19,7 +19,7 @@ from telegram.ext import (
     filters,
 )
 
-from . import commands, handlers, memory, db, reporting, followups
+from . import commands, handlers, memory, db, reporting, followups, polling
 from .config import settings
 from .dashboard.app import create_app, make_server, run_server
 from .db import close_db, init_db
@@ -60,8 +60,12 @@ async def main() -> None:
     # serial processing would hide the owner's own messages (and commands) until
     # the delay ended. Bursts in one chat are collapsed in handlers._chat_gen.
     builder = Application.builder().token(settings.tg_bot_token).concurrent_updates(True)
+    polling_request = polling.MonitoredRequest(proxy=settings.telegram_proxy_url or None,
+        read_timeout=35, connect_timeout=10, write_timeout=10, pool_timeout=5,
+        httpx_kwargs={'trust_env': False})
+    builder = builder.get_updates_request(polling_request)
     if settings.telegram_proxy_url:
-        builder = builder.proxy(settings.telegram_proxy_url).get_updates_proxy(settings.telegram_proxy_url)
+        builder = builder.proxy(settings.telegram_proxy_url)
     if settings.hosted:
         builder = builder.updater(None)  # hosting router feeds updates via /_tg/update
         if not settings.dashboard_enabled:
@@ -111,6 +115,7 @@ async def main() -> None:
     await app.start()
     if app.updater is not None:
         await app.updater.start_polling(
+            timeout=20,
             allowed_updates=[
                 "business_connection",
                 "business_message",
@@ -152,12 +157,19 @@ async def main() -> None:
             log.warning("Dashboard is publicly bound; over plain http the session can be sniffed. "
                         "Prefer an https reverse proxy or the ssh tunnel.")
 
+    monitor_task = asyncio.create_task(polling.watch(polling_request, _request_stop, app.bot)) if app.updater else None
     try:
         await stop.wait()
     except KeyboardInterrupt:
         pass
     finally:
         log.info("Shutting down…")
+        if monitor_task:
+            monitor_task.cancel()
+            try:
+                await monitor_task
+            except (asyncio.CancelledError, Exception):
+                pass
         if dash_server is not None and dash_task is not None:
             dash_server.should_exit = True
             await dash_task

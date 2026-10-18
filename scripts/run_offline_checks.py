@@ -6,7 +6,7 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-checks = ['initialize', 'api_limits', 'core', 'openai', 'private', 'dashboard', 'learning', 'export', 'attribution', 'reporting', 'followups']
+checks = ['initialize', 'polling', 'api_limits', 'core', 'openai', 'private', 'dashboard', 'learning', 'export', 'attribution', 'reporting', 'followups']
 for check in checks:
     env = dict(os.environ, OWNER_FIRST_NAME='Alex', REPORTS_ENABLED='true', URGENT_ALERTS_ENABLED='true')
     # Never inherit user credentials into offline suites.

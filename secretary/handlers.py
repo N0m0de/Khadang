@@ -13,6 +13,7 @@ from . import db, innercircle, llm
 from . import memory as memory_module
 from . import voice as voice_module
 from .config import settings
+from .polling import delayed
 from .outgoing import attributed
 from .api_failures import describe
 from .prompts import load_system_prompt
@@ -469,6 +470,8 @@ async def _handle_inbound_text(
         delay = await _live_int(
             "delay_override", settings.auto_reply_delay_seconds
         )
+    if delayed(msg):
+        delay = 0
     if delay > 0:
         log.debug(
             "delaying auto-reply for chat %s by %ds (away_mode=%s)",
@@ -501,6 +504,9 @@ async def _handle_inbound_text(
     )
 
     approval_mode = await db.get_state_bool("approval_mode")
+    if delayed(msg):
+        escalate = True
+        reason = 'Received late after a connection interruption; review before sending.'
     needs_approval = escalate or approval_mode
 
     history = await db.load_history(
@@ -668,6 +674,7 @@ async def on_business_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) ->
             role="assistant",
             content=msg.text,
             tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
             via_bot=False,
         )
         log.debug("owner-authored message in chat %s — cooldown reset", chat_id)
@@ -686,6 +693,7 @@ async def on_business_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) ->
         role="user",
         content=msg.text,
         tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
     )
 
     await _handle_inbound_text(ctx, msg, conn_id, chat_id, msg.text)
@@ -719,6 +727,7 @@ async def on_business_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> N
             role="assistant",
             content="[voice]",
             tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
             via_bot=False,
         )
         return
@@ -737,6 +746,7 @@ async def on_business_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> N
         await db.append_message(
             conn_id=conn_id, chat_id=chat_id, role="user",
             content="[voice]", tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
         )
         return
     cooldown_seconds = await _live_int(
@@ -750,6 +760,7 @@ async def on_business_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> N
         await db.append_message(
             conn_id=conn_id, chat_id=chat_id, role="user",
             content="[voice]", tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
         )
         return
 
@@ -764,6 +775,7 @@ async def on_business_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> N
         await db.append_message(
             conn_id=conn_id, chat_id=chat_id, role="user",
             content="[voice]", tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
         )
         await _notify_owner(
             ctx, owner_chat_id,
@@ -784,6 +796,7 @@ async def on_business_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> N
         await db.append_message(
             conn_id=conn_id, chat_id=chat_id, role="user",
             content="[voice]", tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
         )
         await _notify_owner(
             ctx, owner_chat_id,
@@ -797,6 +810,7 @@ async def on_business_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> N
         await db.append_message(
             conn_id=conn_id, chat_id=chat_id, role="user",
             content="[voice]", tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
         )
         await _notify_owner(
             ctx, owner_chat_id,
@@ -809,6 +823,7 @@ async def on_business_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> N
     await db.append_message(
         conn_id=conn_id, chat_id=chat_id, role="user",
         content=text_content, tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
     )
 
     await _handle_inbound_text(ctx, msg, conn_id, chat_id, text_content, gen=gen)
@@ -831,7 +846,8 @@ async def on_business_non_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -
     if sender_id == settings.owner_user_id:
         await db.append_message(
             conn_id=conn_id, chat_id=chat_id, role="assistant",
-            content=f"[{kind}]", tg_message_id=msg.message_id, via_bot=False,
+            content=f"[{kind}]", tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None, via_bot=False,
         )
         return
 
@@ -845,6 +861,7 @@ async def on_business_non_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -
     await db.append_message(
         conn_id=conn_id, chat_id=chat_id, role="user",
         content=f"[{kind}]", tg_message_id=msg.message_id,
+            created_at=int(msg.date.timestamp()) if getattr(msg, "date", None) else None,
     )
 
     override = await db.get_override(conn_id=conn_id, chat_id=chat_id)
