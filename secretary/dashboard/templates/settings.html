@@ -147,8 +147,8 @@
   <form method="post" action="{{ root }}/settings/config">
     <datalist id="models">{% for m in models %}<option value="{{ m }}">{% endfor %}</datalist>
     <h3 class="sec">{{ "Models"|t }}</h3>
-    {% if provider == "openai" %}
-    <p class="muted">Direct OpenAI API. Replies and memory use your chosen models; voice notes use the transcription model. Changes apply after restart.</p>
+    {% if provider in ("openai", "qwen_fallback") %}
+    <p class="muted">{% if provider == "qwen_fallback" %}Qwen is primary. The OpenAI models below handle fallback and voice transcription.{% else %}Direct OpenAI API. Replies and memory use your chosen models; voice notes use the transcription model. Changes apply after restart.{% endif %}</p>
     <div class="setting"><label for="OPENAI_MODEL"><b>OpenAI reply model</b></label><input id="OPENAI_MODEL" name="OPENAI_MODEL" value="{{ s.openai_model }}" dir="ltr" required></div>
     <div class="setting"><label for="OPENAI_EXTRACTOR_MODEL"><b>OpenAI memory model</b></label><input id="OPENAI_EXTRACTOR_MODEL" name="OPENAI_EXTRACTOR_MODEL" value="{{ s.openai_extractor_model }}" dir="ltr" required></div>
     <div class="setting"><label for="OPENAI_TRANSCRIPTION_MODEL"><b>OpenAI voice model</b></label><input id="OPENAI_TRANSCRIPTION_MODEL" name="OPENAI_TRANSCRIPTION_MODEL" value="{{ s.openai_transcription_model }}" dir="ltr" required></div>
@@ -168,7 +168,11 @@
     {% if not hosted %}
     <h3 class="sec">{{ "Needs a restart"|t }}</h3>
     <p class="muted" style="margin:0"><small>{{ "These take effect after a restart."|t }}</small></p>
-    <div class="setting"><label for="AI_PROVIDER"><b>AI provider</b></label><select id="AI_PROVIDER" name="AI_PROVIDER">{% for value, label in (("openai", "OpenAI (direct)"), ("openrouter", "OpenRouter"), ("anthropic", "Anthropic"), ("auto", "Automatic")) %}<option value="{{ value }}" {% if s.ai_provider == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="setting"><label for="AI_PROVIDER"><b>AI provider</b></label><select id="AI_PROVIDER" name="AI_PROVIDER">{% for value, label in (("qwen_fallback", "Qwen first → OpenAI fallback"), ("openai", "OpenAI (direct)"), ("openrouter", "OpenRouter"), ("anthropic", "Anthropic"), ("auto", "Automatic")) %}<option value="{{ value }}" {% if s.ai_provider == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <p class="muted">Qwen first sends text to OpenRouter and its model provider. Errors, timeouts, empty or invalid responses switch automatically to your paid OpenAI model. Free Qwen has usage limits. Voice transcription and exported-chat analysis continue to use OpenAI.</p>
+    {% if qwen_available == false %}<p role="status"><strong>No Qwen endpoints are currently available for {{ s.qwen_model }}.</strong> Enabling this model now will use paid OpenAI fallback until a free endpoint returns.</p>{% endif %}
+    <div class="setting"><label for="QWEN_MODEL"><b>Free Qwen model</b></label><input id="QWEN_MODEL" name="QWEN_MODEL" value="{{ s.qwen_model }}" dir="ltr" required></div>
+    <div class="setting"><label for="QWEN_SCOPE"><b>Use Qwen first for</b></label><select id="QWEN_SCOPE" name="QWEN_SCOPE">{% for value, label in (("all", "Replies, memory learning, and daily reports"), ("replies", "Replies only")) %}<option value="{{ value }}" {% if s.qwen_scope == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
     <div class="setting"><label for="OPENAI_API_KEY"><b>OpenAI API key</b><small>Blank keeps the saved key. Your key goes directly to OpenAI.</small></label><input type="password" id="OPENAI_API_KEY" name="OPENAI_API_KEY" placeholder="{{ s.openai_api_key|mask }} (blank keeps it)" autocomplete="off" dir="ltr"></div>
     <div class="setting"><label for="TG_BOT_TOKEN"><b>{{ "Telegram bot token"|t }}</b></label>
       <input type="password" id="TG_BOT_TOKEN" name="TG_BOT_TOKEN" placeholder="{{ s.tg_bot_token|mask }} ({{ 'blank keeps it'|t }})" autocomplete="off" dir="ltr"></div>

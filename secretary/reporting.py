@@ -178,10 +178,24 @@ async def render_report(end: datetime) -> str:
     if selected < len(rows) or len(rows) == 10001:
         coverage += f' Busy-day limit: summary uses {selected} selected excerpts; some messages omitted.'
     summary = None
-    if settings.provider == 'openai' and settings.openai_api_key:
+    if settings.provider in ('openai', 'qwen_fallback') and settings.openai_api_key:
         try:
             # One bounded call per scheduled report; no per-message AI monitoring.
-            result = await llm.openai_client.with_options(max_retries=0).chat.completions.create(
+            async def report_completion(**kwargs):
+                if settings.provider != 'qwen_fallback':
+                    return await llm.openai_client.with_options(max_retries=0).chat.completions.create(**kwargs)
+                from .text_routing import complete
+                from types import SimpleNamespace
+                def validate(raw):
+                    data = json.loads(raw)
+                    if (not isinstance(data, dict) or not isinstance(data.get('summary'), str)
+                            or not data['summary'].strip() or not isinstance(data.get('requests', []), list)):
+                        raise ValueError('Invalid report format')
+                text = await complete(messages=kwargs['messages'], purpose='report',
+                                      fallback_client=llm.openai_client, fallback_model=settings.openai_model,
+                                      max_tokens=1800, validate=validate, json_output=True)
+                return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=text))])
+            result = await report_completion(
                 model=settings.openai_model, store=False, max_completion_tokens=1800,
                 response_format={'type': 'json_object'},
                 messages=[{'role': 'system', 'content': (

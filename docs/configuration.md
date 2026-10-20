@@ -11,7 +11,10 @@ The `SECRETORY_*` internal names are retained for compatibility; the public proj
 | `OWNER_FIRST_NAME` | Your preferred display name |
 | `ASSISTANT_SIGNATURE` | Optional footer; blank derives one from your name |
 | `TG_BOT_TOKEN` | Your own BotFather token |
-| `AI_PROVIDER` | `openai`, `anthropic`, `openrouter`, or `auto` |
+| `AI_PROVIDER` | `openai`, `qwen_fallback`, `anthropic`, `openrouter`, or `auto` |
+| `OPENROUTER_API_KEY` | Your own OpenRouter key; required for Qwen first |
+| `QWEN_MODEL` | Free Qwen model; default `qwen/qwen3.8-27b:free` |
+| `QWEN_SCOPE` | `all` (replies, memory, reports) or `replies` only |
 | `OPENAI_API_KEY` | Your own OpenAI API key |
 | `OPENAI_MODEL` | Reply and daily report model; default `gpt-4.1-mini` |
 | `OPENAI_EXTRACTOR_MODEL` | Memory/export analysis model; independently configurable |
@@ -22,19 +25,20 @@ The `SECRETORY_*` internal names are retained for compatibility; the public proj
 | `PROMPTS_DIR` | Private prompt folder, default `./prompts` |
 | `DASHBOARD_PORT` | Local dashboard port, default 8780 |
 | `DASHBOARD_LANG` | `en` or `fa` |
-| `REPORTS_ENABLED` | Opt-in OpenAI reports at noon and midnight, Tehran time |
+| `REPORTS_ENABLED` | Opt-in AI reports at noon and midnight, Tehran time |
 | `URGENT_ALERTS_ENABLED` | Opt-in local phrase-based immediate alerts |
 
-The dashboard supports provider-specific fields. Reports and export analysis currently
-use direct OpenAI; other providers receive a basic excerpt report instead. Running
+The dashboard supports provider-specific fields. Reports use direct OpenAI or
+[Qwen first with OpenAI fallback](qwen.md). Export analysis uses direct OpenAI;
+other providers receive a basic excerpt report instead. Running
 multiple processes for one bot token causes Telegram polling conflicts. Use a separate
 token, configuration directory and database for each owner.
 
 ## Reports and follow-ups
 
 Noon covers midnight-to-noon; midnight covers the full preceding calendar day. Reports
-are delivered to your own bot chat. A nonempty report makes one bounded OpenAI summary
-and request-extraction call, with a maximum 36,000 input excerpt characters and 1,800
+are delivered to your own bot chat. A nonempty report makes a bounded summary
+and request-extraction call (plus OpenAI fallback if Qwen fails), with a maximum 36,000 input excerpt characters and 1,800
 output tokens. Busy-day coverage limits are disclosed. API failure falls back to excerpts.
 
 At midnight, actionable requests receive private inline cards. Done, Confirmed/attending,

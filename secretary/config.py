@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     tg_bot_token: str = ""
     telegram_proxy_url: str = ""
     ai_provider: str = "auto"
+    qwen_model: str = "qwen/qwen3.8-27b:free"
+    qwen_scope: str = "all"
     openai_api_key: str = ""
     openai_model: str = "gpt-4.1-mini"
     openai_extractor_model: str = "gpt-4.1-mini"
@@ -73,7 +75,7 @@ class Settings(BaseSettings):
 
     @property
     def provider(self) -> str:
-        if self.ai_provider in ("openai", "anthropic", "openrouter"):
+        if self.ai_provider in ("openai", "anthropic", "openrouter", "qwen_fallback"):
             return self.ai_provider
         if self.openai_api_key:
             return "openai"
@@ -81,10 +83,14 @@ class Settings(BaseSettings):
 
     @property
     def provider_key(self) -> str:
+        if self.provider == "qwen_fallback":
+            return self.openrouter_api_key or self.openai_api_key
         return getattr(self, self.provider + "_api_key")
 
     @property
     def reply_model(self) -> str:
+        if self.provider == "qwen_fallback":
+            return f"{self.qwen_model} → {self.openai_model}"
         if self.provider == "openai":
             return self.openai_model
         return self.anthropic_model if self.provider == "anthropic" else self.openrouter_model

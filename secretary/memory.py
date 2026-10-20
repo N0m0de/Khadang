@@ -62,6 +62,22 @@ async def _chat(system: str, user: str, *, max_tokens: int) -> str:
     if settings.provider == "anthropic":
         return claude.strip_fences(await claude.complete(
             system=system, messages=[{"role": "user", "content": user}], max_tokens=max_tokens + 2048))
+    if settings.provider == "qwen_fallback":
+        from .text_routing import complete
+        def validate(raw):
+            if system in (EXTRACTION_SYSTEM, STYLE_SYSTEM):
+                parsed = json.loads(raw)
+                if not isinstance(parsed, dict):
+                    raise ValueError("Expected a JSON object")
+                if system == EXTRACTION_SYSTEM and not isinstance(parsed.get("memories"), list):
+                    raise ValueError("Expected memories array")
+                if system == STYLE_SYSTEM and not all(k in parsed for k in ("avg_length", "formality", "languages")):
+                    raise ValueError("Expected style fields")
+        return await complete(messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+                              purpose="memory", fallback_client=_openai_extractor,
+                              fallback_model=settings.openai_extractor_model, max_tokens=max_tokens + 4096,
+                              transform=claude.strip_fences, validate=validate,
+                              json_output=system in (EXTRACTION_SYSTEM, STYLE_SYSTEM))
     if settings.provider == "openai":
         response = await completion(_openai_extractor,
             model=settings.openai_extractor_model,

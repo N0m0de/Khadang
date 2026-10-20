@@ -67,7 +67,7 @@ def _credit_view(credit: dict | None) -> dict | None:
 
 
 async def _credit() -> dict | None:
-    if settings.provider == "openai":
+    if settings.provider in ("openai", "qwen_fallback"):
         return None  # OpenAI has no per-key balance endpoint; do not show OpenRouter credit.
     """Same shape as OpenRouter's /key: limit, usage, limit_remaining (None = no cap)."""
     if settings.provider == "anthropic":
@@ -135,7 +135,7 @@ _RETENTION_LABELS = {0: "Forever", 1: "1 day", 7: "A week", 30: "A month"}
 _OWN_CONTROL = {"delay_override", "retention_days"}
 # .env keys the bot reads per call, so assigning them on `settings` applies at once.
 LIVE_ENV_KEYS = ("OPENROUTER_MODEL", "EXTRACTOR_MODEL", "WHISPER_MODEL", "OWNER_FIRST_NAME", "HISTORY_TURNS")
-RESTART_KEYS = {"TG_BOT_TOKEN", "OPENROUTER_API_KEY", "OWNER_USER_ID", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_EXTRACTOR_MODEL", "OPENAI_TRANSCRIPTION_MODEL", "AI_PROVIDER"}
+RESTART_KEYS = {"TG_BOT_TOKEN", "OPENROUTER_API_KEY", "OWNER_USER_ID", "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_EXTRACTOR_MODEL", "OPENAI_TRANSCRIPTION_MODEL", "AI_PROVIDER", "QWEN_MODEL", "QWEN_SCOPE"}
 # Whisper is an audio model and may be missing from /models, so only these are checked.
 CHECKED_MODEL_KEYS = ("OPENROUTER_MODEL", "EXTRACTOR_MODEL")
 _TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -172,6 +172,32 @@ def _onoff(flag: bool) -> str:
     return "on" if flag else "off"
 
 
+_qwen_availability_cache = ("", 0.0, None)
+
+
+async def _qwen_availability():
+    """Public endpoint metadata only; a failed check never breaks Settings."""
+    global _qwen_availability_cache
+    model, checked_at, available = _qwen_availability_cache
+    if model == settings.qwen_model and time.monotonic() - checked_at < 300:
+        return available
+    try:
+        from urllib.parse import quote
+        url = "https://openrouter.ai/api/v1/models/" + quote(settings.qwen_model, safe="/:") + "/endpoints"
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.get(url)
+        if response.status_code == 404:
+            available = False
+        elif response.status_code == 200:
+            available = bool(response.json()["data"]["endpoints"])
+        else:
+            available = None
+    except Exception:
+        available = None
+    _qwen_availability_cache = (settings.qwen_model, time.monotonic(), available)
+    return available
+
+
 @router.get("/settings")
 async def settings_page(request: Request):
     voice_raw = await db.get_state("voice_override") or ""
@@ -189,6 +215,7 @@ async def settings_page(request: Request):
         voice_on=(voice_raw or _onoff(settings.voice_transcribe)) == "on",
         voice_available=settings.provider != "anthropic",
         provider=settings.provider,
+        qwen_available=await _qwen_availability() if settings.provider == "qwen_fallback" else None,
         quiet_on=bool(quiet_start and quiet_end),
         quiet_start=quiet_start or "23:00",
         quiet_end=quiet_end or "07:00",
@@ -295,6 +322,8 @@ async def save_config(request: Request):
         "OPENAI_EXTRACTOR_MODEL": settings.openai_extractor_model,
         "OPENAI_TRANSCRIPTION_MODEL": settings.openai_transcription_model,
         "AI_PROVIDER": settings.ai_provider,
+        "QWEN_MODEL": settings.qwen_model,
+        "QWEN_SCOPE": settings.qwen_scope,
     }
     if settings.hosted:
         current.pop("OWNER_USER_ID")
@@ -303,8 +332,12 @@ async def save_config(request: Request):
         if key not in form:  # partial form (e.g. only the technical models): leave it as is
             continue
         new = str(form.get(key, "")).strip()
-        if key == "AI_PROVIDER" and new not in ("auto", "openai", "openrouter", "anthropic"):
+        if key == "AI_PROVIDER" and new not in ("auto", "openai", "openrouter", "anthropic", "qwen_fallback"):
             return back("/settings", err="Choose a supported AI provider.")
+        if key == "QWEN_SCOPE" and new not in ("all", "replies"):
+            return back("/settings", err="Choose Qwen for all text or replies only.")
+        if key == "QWEN_MODEL" and not (new.startswith("qwen/") and new.endswith(":free")):
+            return back("/settings", err="Choose a Qwen model id ending in :free.")
         if not new:
             return back("/settings", err=f"{key} " + t("can't be empty."))
         if key in ("HISTORY_TURNS", "OWNER_USER_ID"):
@@ -359,6 +392,11 @@ async def save_config(request: Request):
         except httpx.TransportError as e:
             advice = " Check the private Khadang proxy service on the server." if checking_service == "Telegram" and settings.telegram_proxy_url else ""
             return back("/settings", err=f"Couldn't reach {checking_service} to validate credentials; nothing saved.{advice}")
+    if changes.get("AI_PROVIDER", settings.ai_provider) == "qwen_fallback":
+        if not (changes.get("OPENROUTER_API_KEY") or settings.openrouter_api_key):
+            return back("/settings", err="Enter your OpenRouter key to enable Qwen first; nothing saved.")
+        if not (changes.get("OPENAI_API_KEY") or settings.openai_api_key):
+            return back("/settings", err="An OpenAI key is required for automatic fallback; nothing saved.")
     if not changes:
         return back("/settings", msg="Nothing changed.")
     try:

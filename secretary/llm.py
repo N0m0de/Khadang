@@ -111,6 +111,11 @@ async def generate_reply(
         )
     messages.extend(history)
     messages.append({"role": "user", "content": wrapped})
+    if settings.provider == "qwen_fallback":
+        from .text_routing import complete
+        return await complete(messages=messages, purpose="reply", fallback_client=openai_client,
+                              fallback_model=settings.openai_model, max_tokens=4096,
+                              transform=_clean_output)
     if settings.provider == "openai":
         for _ in range(2):
             result = await completion(openai_client,

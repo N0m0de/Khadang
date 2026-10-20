@@ -9,7 +9,7 @@ See [UPSTREAM.md](UPSTREAM.md). The Python package is still called `secretary`.
 
 ## What you get
 
-- Direct OpenAI replies, memory extraction and voice transcription; optional Anthropic/OpenRouter support.
+- Direct OpenAI replies, memory extraction and voice transcription; optional free Qwen with automatic OpenAI fallback, Anthropic, and OpenRouter support.
 - Per-contact personas, reviewed style learning, memory controls, and approval/edit/skip drafts.
 - A reply delay and owner-activity cooldown so you can answer first.
 - Password-protected local dashboard; remote access through your own SSH tunnel.
@@ -72,6 +72,7 @@ The dashboard remains available for configuration even before credentials are su
 ## Configuration and operation
 
 - [Configuration, reports and follow-ups](docs/configuration.md)
+- [Free Qwen with automatic OpenAI fallback](docs/qwen.md)
 - [Linux server deployment and Windows tunnel](docs/deployment.md)
 - [Optional private chat-export learning](docs/export-learning.md)
 - [Security and data retention](SECURITY.md)
@@ -85,8 +86,8 @@ URGENT_ALERTS_ENABLED=true
 ```
 
 Restart after changing these settings. Reports run on the server without your laptop.
-Report summaries send selected conversations to OpenAI using your configured model and
-API credit. Alerts use Persian/English phrase matching and can miss unusual wording or
+Report summaries send selected conversations to your configured model provider, using
+OpenAI by default or Qwen first in fallback mode. Alerts use Persian/English phrase matching and can miss unusual wording or
 produce false alarms. They do not schedule appointments or take emergency action.
 
 ## Your data and costs

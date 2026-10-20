@@ -24,7 +24,7 @@ async def transcribe(ogg_bytes: bytes) -> str | None:
     if n > MAX_BYTES:
         log.warning("whisper: audio too large (%d bytes > %d), skipping", n, MAX_BYTES)
         return None
-    if settings.provider == "openai":
+    if settings.provider in ("openai", "qwen_fallback"):
         return await _openai_transcribe(ogg_bytes)
     payload = {
         "model": settings.whisper_model,
