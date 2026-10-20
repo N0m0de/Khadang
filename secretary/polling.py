@@ -2,6 +2,8 @@
 import asyncio
 import json
 import time
+import os
+import threading
 from telegram.error import TimedOut
 from telegram.request import HTTPXRequest
 from . import db
@@ -10,6 +12,14 @@ from .config import settings
 
 _active = None
 REQUEST_DEADLINE = 50
+
+
+def arm_shutdown(seconds=30, exit_function=os._exit):
+    """A daemon thread also enforces the deadline if async cleanup stops progressing."""
+    timer = threading.Timer(seconds, exit_function, args=(75,))
+    timer.daemon = True
+    timer.start()
+    return timer
 
 
 class MonitoredRequest(HTTPXRequest):

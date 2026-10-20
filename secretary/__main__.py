@@ -9,6 +9,7 @@ load_dotenv(os.getenv('SECRETORY_CONFIG_FILE', '.env'))
 os.environ.setdefault('SECRETORY_PRIVATE_AUTH', '1')
 
 from telegram import Update
+from telegram.error import NetworkError
 from telegram.ext import (
     Application,
     BusinessConnectionHandler,
@@ -43,6 +44,7 @@ async def _on_error(update: object, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def main() -> None:
     await init_db()
+    await db.set_state('runtime_mode', 'starting')
     if os.getenv("SECRETORY_PRIVATE_AUTH") == "1":
         if settings.hosted or settings.dashboard_host != "127.0.0.1":
             raise RuntimeError("Private Khadang requires a loopback dashboard without hosted mode")
@@ -53,6 +55,7 @@ async def main() -> None:
                 await db.set_state_bool(key, True)
         if not (settings.tg_bot_token and settings.owner_user_id > 0
                 and settings.provider_key):
+            await db.set_state('runtime_mode', 'unconfigured')
             await _configuration_dashboard()
             return
 
@@ -105,10 +108,17 @@ async def main() -> None:
 
     try:
         await app.initialize()
-    except Exception:
+    except Exception as error:
+        await db.set_state('startup_error_type', type(error).__name__)
+        if isinstance(error, (NetworkError, OSError, TimeoutError)):
+            # Let the supervisor retry; a transient network failure must not leave
+            # the process permanently serving configuration instead of receiving.
+            await db.set_state('runtime_mode', 'startup_network_failure')
+            raise RuntimeError('Telegram startup connection failed; supervisor restart required') from None
         if os.getenv("SECRETORY_PRIVATE_AUTH") != "1":
             raise
         # Keep credential repair available without logging token-bearing errors.
+        await db.set_state('runtime_mode', 'configuration_connection_failure')
         await _configuration_dashboard(connection_failed=True)
         return
     await reporting.initialize()
@@ -128,6 +138,7 @@ async def main() -> None:
         )
 
     log.info("Secretary bot online. Model=%s. Ctrl+C to stop.", settings.reply_model)
+    await db.set_state('runtime_mode', 'receiving')
 
     worker_task = asyncio.create_task(memory.extract_worker())
     reporting_task = asyncio.create_task(reporting.run(app.bot))
@@ -136,6 +147,8 @@ async def main() -> None:
     loop = asyncio.get_running_loop()
 
     def _request_stop() -> None:
+        if not stop.is_set():
+            polling.arm_shutdown()
         stop.set()
 
     # SIGINT/SIGTERM may not be available on Windows event loop policy in some setups.

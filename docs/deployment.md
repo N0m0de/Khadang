@@ -30,6 +30,8 @@ WorkingDirectory=/var/lib/khadang
 ExecStart=/opt/khadang/.venv/bin/python -m secretary
 Restart=always
 RestartSec=5
+TimeoutStopSec=20
+KillMode=control-group
 UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
@@ -62,3 +64,42 @@ your laptop is off; the tunnel is needed only to view the private dashboard.
 
 Leave the dashboard bound to loopback. Do not open its port on the public firewall or
 reuse somebody else's VPN profile, SSH key, bot token, or password.
+
+## Independent receiver health check
+
+For unattended deployments, supervise successful message reception as well as process
+state. A temporary Telegram startup failure exits for systemd to retry; the internal
+watchdog also sets a 30-second hard shutdown deadline. The separate check below catches
+a hung event loop or a setup-only process with stale polling health.
+
+Add `/etc/systemd/system/khadang-healthcheck.service`:
+
+```ini
+[Unit]
+Description=Khadang receiver health check
+After=khadang.service
+[Service]
+Type=oneshot
+ExecStart=/opt/khadang/.venv/bin/python /opt/khadang/scripts/service_healthcheck.py --service khadang --db /var/lib/khadang/runtime/khadang.db
+TimeoutStartSec=45
+```
+
+Add `/etc/systemd/system/khadang-healthcheck.timer`:
+
+```ini
+[Unit]
+Description=Check Khadang receiver every minute
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=khadang-healthcheck.service
+[Install]
+WantedBy=timers.target
+```
+
+Adapt the database path if you changed `DB_PATH`. Then run `systemctl daemon-reload`
+and `systemctl enable --now khadang-healthcheck.timer`. The checker requires service
+administrator permissions to restart only the named service. It reads heartbeat metadata
+only, not API keys or message content; it respects a manually stopped service and grants
+three minutes for startup. A deliberately unconfigured installation is skipped.

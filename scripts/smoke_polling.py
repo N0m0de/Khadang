@@ -14,10 +14,47 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from secretary import db, polling
 from telegram.error import TimedOut
 from telegram.request import HTTPXRequest
+import runpy
 
 
 async def main():
     await db.init_db()
+    with patch.object(polling.threading, 'Timer') as timer:
+        exit_function=Mock()
+        polling.arm_shutdown(exit_function=exit_function)
+        assert timer.call_args.args==(30,exit_function)
+        assert timer.call_args.kwargs['args']==(75,)
+        assert timer.return_value.daemon is True and timer.return_value.start.called
+    guard=runpy.run_path(str(Path(__file__).parent/'service_healthcheck.py'))['needs_restart']
+    assert not guard('unconfigured',None,500,1000)
+    assert not guard('receiving',None,100,1000)
+    assert not guard('receiving',990,500,1000)
+    assert guard('configuration_connection_failure',500,500,1000)
+    assert guard('receiving',500,500,1000)
+    # Reproduce the original failure: transient startup errors must exit for the
+    # supervisor to retry, never park permanently in the setup-only dashboard.
+    from secretary import __main__ as entry
+    from telegram.ext import Application, ApplicationBuilder
+    apps=[]
+    real_build=ApplicationBuilder.build
+    def capture_build(builder):
+        app=real_build(builder)
+        apps.append(app)
+        return app
+    with patch.dict(os.environ,{'SECRETORY_PRIVATE_AUTH':'0'}), \
+         patch.object(entry.settings,'tg_bot_token','0:synthetic'), \
+         patch.object(ApplicationBuilder,'build',capture_build), \
+         patch.object(Application,'initialize',AsyncMock(side_effect=TimedOut('synthetic startup timeout'))):
+        try:
+            await entry.main()
+            raise AssertionError('Startup network failure was swallowed')
+        except RuntimeError as error:
+            assert 'supervisor restart' in str(error)
+    assert await db.get_state('runtime_mode')=='startup_network_failure'
+    for app in apps:
+        await app.bot.request.shutdown()
+    if polling._active:
+        await polling._active.shutdown()
     request = polling.MonitoredRequest()
     with patch.object(HTTPXRequest, 'do_request', AsyncMock(return_value=(200,b'{}'))):
         assert (await request.do_request(url='unused',method='POST'))[0] == 200
