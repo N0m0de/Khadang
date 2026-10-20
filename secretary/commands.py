@@ -153,6 +153,19 @@ async def on_resume(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await _reply(update, "▶️ Bot resumed.")
 
 
+async def on_model(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    # Check the actual regular message, not effective_message (which can be a
+    # business update); never reply to a group or a contact conversation.
+    message = update.message
+    if (not _is_owner(update) or message is None or update.effective_chat is None
+            or update.effective_chat.type != "private"
+            or update.effective_chat.id != settings.owner_user_id
+            or getattr(message, "business_connection_id", None)):
+        return
+    from .model_status import describe
+    await _reply(update, await describe())
+
+
 async def on_status(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user is None or update.effective_user.id != settings.owner_user_id:
         return
@@ -748,7 +761,9 @@ async def on_undo(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 # ---------------------------------------------------------------------------
 
 
-HELP_TEXT = """\
+HELP_TEXT = """
+/model — private active model and latest generation/fallback
+\
 Owner commands:
 
 State:
@@ -1273,6 +1288,8 @@ def register(app: Application) -> None:
     app.add_handler(CommandHandler("pause", on_pause))
     app.add_handler(CommandHandler("resume", on_resume))
     app.add_handler(CommandHandler("status", on_status))
+    app.add_handler(CommandHandler("model", on_model,
+        filters=filters.ChatType.PRIVATE & filters.User(settings.owner_user_id)))
     app.add_handler(CommandHandler("stats", on_stats))
     app.add_handler(CommandHandler("last", on_last))
     app.add_handler(CommandHandler("pause_chat", on_pause_chat))

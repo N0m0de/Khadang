@@ -14,6 +14,15 @@ If both providers fail, existing error notification/draft behavior applies.
    operations (replies, memory learning, summaries, and reports) or replies only.
 5. Save and restart from the dashboard.
 
+Send `/model` directly to your bot to see the active configuration and the latest
+recorded successful generation's provider/model, time, and Qwen fallback reason.
+This command is restricted to the owner's private bot chat; it never responds in
+business/contact chats or groups and makes no AI request. Records contain only
+model identifiers, timestamps and exception classes/HTTP status, without message
+content or keys. Reply generation records cover all providers. Learning/report
+records cover operations using the Qwen/OpenAI routing path. A generated reply
+can still await approval or fail to send; these records are not delivery receipts.
+
 Equivalent environment settings:
 
 ```dotenv

@@ -46,6 +46,8 @@ async def complete(*, messages, purpose: str, fallback_client, fallback_model: s
     Cancellation propagates without starting a second request. Provider fallback
     happens before any Telegram send or memory/database mutation.
     """
+    from .model_status import record
+    fallback_reason = None
     if enabled(purpose):
         try:
             if not settings.openrouter_api_key:
@@ -58,14 +60,23 @@ async def complete(*, messages, purpose: str, fallback_client, fallback_model: s
                     temperature=0.4,
                     extra_body={"reasoning": {"enabled": False, "exclude": True}},
                     **({"response_format": {"type": "json_object"}} if json_output else {}))
-                return usable(response, transform, validate)
+                text = usable(response, transform, validate)
         except Exception as error:
+            fallback_reason = type(error).__name__
+            status = getattr(error, 'status_code', None)
+            if isinstance(status, int):
+                fallback_reason += f' (HTTP {status})'
             # Exception class only: provider error bodies can echo private input.
             log.warning("Qwen fallback purpose=%s reason=%s", purpose, type(error).__name__)
+        else:
+            await record(purpose, 'openrouter', settings.qwen_model, response)
+            return text
     if not settings.openai_api_key:
         raise ValueError("OpenAI fallback credential is missing")
     async with asyncio.timeout(FALLBACK_TIMEOUT):
         response = await fallback_client.chat.completions.create(
             model=fallback_model, messages=messages, max_completion_tokens=max_tokens,
             store=False, **({"response_format": {"type": "json_object"}} if json_output else {}))
-        return usable(response, transform, validate)
+        text = usable(response, transform, validate)
+    await record(purpose, 'openai', fallback_model, response, fallback_reason)
+    return text

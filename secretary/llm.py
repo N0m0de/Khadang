@@ -124,6 +124,8 @@ async def generate_reply(
             )
             text = _clean_output(result.choices[0].message.content or "")
             if text:
+                from .model_status import record
+                await record('reply', 'openai', model or settings.openai_model, result)
                 return text
         return ""
     chosen_model = model or settings.openrouter_model
@@ -155,6 +157,9 @@ async def generate_reply(
             extra_body=extra_body,
         )
         text = _clean_output(resp.choices[0].message.content or "")
+    if text:
+        from .model_status import record
+        await record('reply', 'openrouter', chosen_model, resp)
     return text
 
 
@@ -169,5 +174,7 @@ async def _claude_reply(system_prompt: str, history: list[dict[str, Any]], wrapp
     for _ in range(2):  # one retry on an empty reply, like the OpenRouter path
         text = _clean_output(await claude.complete(system=system, messages=messages, max_tokens=2048))
         if text:
+            from .model_status import record
+            await record('reply', 'anthropic', settings.anthropic_model)
             return text
     return ""
